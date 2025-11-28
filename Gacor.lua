@@ -5672,6 +5672,8 @@ NotificationModule:Init(GUI)
 
 local New = Creator.New
 
+
+
 local Icons = {
 	["lucide-accessibility"] = "rbxassetid://10709751939",
 	["lucide-activity"] = "rbxassetid://10709752035",
@@ -7496,7 +7498,7 @@ local Window = Library:CreateWindow({
 })
 
 local Minimizer = Library:CreateMinimizer({
-    Icon = "lucide-airplay",
+    Icon = "lucide-activity",
     Size = UDim2.fromOffset(44, 44),
     Position = UDim2.new(0, 320, 0, 24),
     Acrylic = true,
@@ -7511,6 +7513,10 @@ local Minimizer = Library:CreateMinimizer({
 ----------------------------------------------------
 local Home     = Window:AddTab({ Title = "Home", Icon = "home" })
 local Main     = Window:AddTab({ Title = "Main", Icon = "user" })
+local Auto     = Window:AddTab({ Title = "Auto", Icon = "git-branch" })
+local Vuln     = Window:AddTab({ Title = "Vuln", Icon = "alert-circle" })
+local Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" })
+
 ----------------------------------------------------
 -- 🏠 HOME TAB
 ----------------------------------------------------
@@ -7527,16 +7533,105 @@ Home:AddButton({
 })
 
 ----------------------------------------------------
--- ⚡ VULN TAB (Super Instant Fishing v5)
+-- 🎣 MAIN TAB (Auto Fishing)
 ----------------------------------------------------
--- 🧠 SUPER INSTANT FISHING v5 (Perfect Timing + Anti-Pause)
+local autoFishEnabled = false
+local fishingLoop
+
+Main:AddToggle("AutoFish", {
+    Title = "Auto Fishing",
+    Description = "Automatically fish without manual input",
+    Default = false,
+    Callback = function(Value)
+        autoFishEnabled = Value
+        if Value then
+            Fluent:Notify({
+                Title = "Auto Fishing",
+                Content = "Auto fishing enabled! 🎣",
+                Duration = 3
+            })
+            fishingLoop = task.spawn(function()
+                while autoFishEnabled do
+                    pcall(function()
+                        local rs = game:GetService("ReplicatedStorage")
+                        local net = rs.Packages._Index:FindFirstChild("sleitnick_net@0.2.0").net
+                        net:FindFirstChild("RF/ChargeFishingRod"):InvokeServer(1761049514)
+                        task.wait(0.1)
+                        net:FindFirstChild("RF/RequestFishingMinigameStarted"):InvokeServer(-0.57, 0.95)
+                        task.wait(0.1)
+                        net:FindFirstChild("RE/FishingCompleted"):FireServer()
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        else
+            Fluent:Notify({ Title = "Auto Fishing", Content = "Auto fishing disabled", Duration = 3 })
+            if fishingLoop then task.cancel(fishingLoop) end
+        end
+    end
+})
+
+----------------------------------------------------
+-- 🤖 AUTO TAB (Auto Sell)
+----------------------------------------------------
+local autoSellEnabled = false
+local sellDelay = 1
+local autoSellLoop
+
+Auto:AddToggle("AutoSellAll", {
+    Title = "Auto Sell All",
+    Description = "Automatically sells all items every interval",
+    Default = false,
+    Callback = function(Value)
+        autoSellEnabled = Value
+        if Value then
+            Fluent:Notify({ Title = "Auto Sell", Content = "Enabled 💰", Duration = 3 })
+            autoSellLoop = task.spawn(function()
+                while autoSellEnabled do
+                    pcall(function()
+                        local net = game:GetService("ReplicatedStorage")
+                            .Packages._Index:FindFirstChild("sleitnick_net@0.2.0").net
+                        net:FindFirstChild("RF/SellAllItems"):InvokeServer()
+                    end)
+                    task.wait(sellDelay * 60)
+                end
+            end)
+        else
+            Fluent:Notify({ Title = "Auto Sell", Content = "Disabled ❌", Duration = 3 })
+            if autoSellLoop then task.cancel(autoSellLoop) end
+        end
+    end
+})
+
+Auto:AddInput("SellDelayInput", {
+    Title = "Sell Delay (minutes)",
+    Default = tostring(sellDelay),
+    Placeholder = "Default: 1",
+    Numeric = true,
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num then
+            sellDelay = num
+            Fluent:Notify({
+                Title = "Sell Delay",
+                Content = "Updated to " .. num .. " minute(s)",
+                Duration = 3
+            })
+        end
+    end
+})
+
+----------------------------------------------------
+-- ⚡ VULN TAB (Super Instant Fishing v3)
+----------------------------------------------------
+-- 🧠 SUPER INSTANT FISHING v3 (Perfect Timing + Anti-Pause)
 local superInstantEnabled = false
 local instantReelDelay = 0.05
 local superInstantDelay = 1
 local superInstantThread
 
-Main:AddToggle("SuperInstantFishing", {
-    Title = "Super Instant Fishing v5",
+Vuln:AddToggle("SuperInstantFishing", {
+    Title = "Super Instant Fishing v3",
     Description = "Enable Perfect Timing + Anti-Pause Watchdog",
     Default = false,
     Callback = function(Value)
@@ -7688,6 +7783,78 @@ Vuln:AddInput("SuperInstantDelayInput", {
 })
 
 ----------------------------------------------------
+-- 🧭 TELEPORT TAB
+----------------------------------------------------
+Teleport:AddParagraph({
+    Title = "🧭 Map Teleport System",
+    Content = "Pilih map dari daftar lalu tekan tombol teleport untuk berpindah lokasi dengan cepat."
+})
+
+local teleportLocationsp = {
+    ["Ancient Tample"] = CFrame.new(1872.81, 8.28, -570.20),
+    ["Kohana"] = CFrame.new(-642.57, 16.04, 610.54),
+    ["Hallowen Island"] = CFrame.new(1845, 22.99, 3105.09),
+    ["Esoteric Depth"] = CFrame.new(3228.52, -1302.85, 1403.73),
+    ["Tropical Grove"] = CFrame.new(-2018.93, 9.04, 3748.85),
+    ["Treasure Hall"] = CFrame.new(-3555.34, -266.57, -1599.73),
+    ["Weather Mechine"] = CFrame.new(-1505.14, 6.50, 1890.95),
+    ["Coral Reef"] = CFrame.new(-3173.28, 6.60, 2272.98),
+    ["Kohana Volcano"] = CFrame.new(-630.81, 55.88, 201.10),
+    ["Lost Isle"] = CFrame.new(-3741.32, -135.57, -1023.33)
+}
+
+local selectedMap = "Ancient Tample"
+
+-- build array of map names (table.keys not available in Luau)
+local mapNames = {}
+for k, _ in pairs(teleportLocations) do
+    table.insert(mapNames, k)
+end
+-- optional: sort alphabetically for nicer dropdown
+table.sort(mapNames)
+
+Teleport:AddDropdown("MapSelect", {
+    Title = "Select Map",
+    Values = mapNames,
+    Default = selectedMap,
+    Multi = false,
+    Callback = function(Value)
+        selectedMap = Value
+        Fluent:Notify({
+            Title = "Map Selected",
+            Content = "You chose: " .. Value,
+            Duration = 2
+        })
+    end
+})
+
+Teleport:AddButton({
+    Title = "Teleport",
+    Description = "Teleport ke map terpilih",
+    Callback = function()
+        local loc = teleportLocations[selectedMap]
+        if loc then
+            task.spawn(function()
+                task.wait(1)
+                -- protect if character or rootpart nil
+                local plr = game.Players.LocalPlayer
+                if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    plr.Character.HumanoidRootPart.CFrame = loc
+                    print("[Teleport] Moved to:", selectedMap)
+                    Fluent:Notify({
+                        Title = "Teleported!",
+                        Content = "You are now at " .. selectedMap,
+                        Duration = 3
+                    })
+                else
+                    Fluent:Notify({ Title = "Teleport", Content = "Unable to teleport (character not ready).", Duration = 3 })
+                end
+            end)
+        end
+    end
+})
+
+----------------------------------------------------
 -- 🚀 LOAD DONE
 ----------------------------------------------------
 task.defer(function() Window:SelectTab(1) end)
@@ -7696,3 +7863,5 @@ Fluent:Notify({
     Content = "Loaded with Bloody theme 🔥",
     Duration = 6
 })
+
+
